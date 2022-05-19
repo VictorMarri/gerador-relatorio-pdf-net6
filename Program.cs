@@ -17,11 +17,15 @@ class Program
     {
         if (File.Exists("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json"))
         {
-            using (var sr = new StreamReader("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json"))
-            {
-                var dados = sr.ReadToEnd();
-                pessoas = JsonSerializer.Deserialize(dados, typeof(List<Pessoa>)) as List<Pessoa>;
-            }
+            //using (var sr = new StreamReader("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json"))
+            //{
+            //    var dados = sr.ReadToEnd();
+            //    pessoas = JsonSerializer.Deserialize(dados, typeof(List<Pessoa>)) as List<Pessoa>;
+            //}
+
+            using var sr = new StreamReader("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json");
+            var dados = sr.ReadToEnd();
+            pessoas = JsonSerializer.Deserialize(dados, typeof(List<Pessoa>)) as List<Pessoa>;
         }
     }
 
@@ -32,18 +36,21 @@ class Program
         if (pessoasSelecionadas.Any())
         {
             //Configurando o documento PDF
+            #region Dimensões do documento PDF
             var pixelsPorMilimetro = 72 / 25.2F; //Ajustando a resolução do PDF. Sabemos que é 72dpi por padrão 
             var tamanhoPagina = PageSize.A4;
             var margemEsquerda = 15 * pixelsPorMilimetro;
             var margemDireita = 15 * pixelsPorMilimetro;
             var margemSuperior = 15 * pixelsPorMilimetro;
-            var margemInferior = 20 * pixelsPorMilimetro;
+            var margemInferior = 20 * pixelsPorMilimetro; 
+            #endregion
             var pdf = new Document(tamanhoPagina, margemEsquerda, margemDireita, margemSuperior, margemInferior);
 
             var nomeArquivo = $"pessoas.{DateTime.Now.ToString("yyyy.MM.dd.HH.mm.ss")}.pdf";
 
             var arquivo = new FileStream(nomeArquivo, FileMode.Create); //Criando um novo arquivo
             var writer = PdfWriter.GetInstance(pdf, arquivo); //Associamos o documento pdf que estamos criando, ao arquivo que criamos. Portantom tudo que fizemos no documento PDF será salvo nesse arquivo
+            writer.PageEvent = new EventosDePagina();
             pdf.Open(); //Inicializa o objeto pra ele começar a receber conteudo no PDF
 
 
@@ -178,7 +185,6 @@ class Program
             celula.Border = 0;
             celula.BorderWidthBottom = 1;
             celula.FixedHeight = alturaCelula;
-            celula.PaddingBottom = 5;
             celula.BackgroundColor = corLinha;
             tabela.AddCell(celula);
 
