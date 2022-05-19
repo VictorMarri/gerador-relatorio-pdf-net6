@@ -51,6 +51,7 @@ class Program
             var fonteParagrafo = new iTextSharp.text.Font(fonteBaseTextosRelatorio, 32, iTextSharp.text.Font.NORMAL, BaseColor.Black);
             var titulo = new Paragraph("Relatório de Pessoas\n\n", fonteParagrafo);
             titulo.Alignment = Element.ALIGN_LEFT; //Ajustando o titulo à esquerda do docimento
+            titulo.SpacingAfter = 4;
             pdf.Add(titulo);
 
             //Adicionando imagem
@@ -74,15 +75,30 @@ class Program
 
             //Adicionando a tabela de dados
             var tabela = new PdfPTable(5); //Gerando uma tabela com 5 colunas
+            float[] larguraColunas = { 0.6f, 2f, 1.5f, 1f, 1f };
+            tabela.SetWidths(larguraColunas); //Ajustando as proporções das colunas da planilha
             tabela.DefaultCell.BorderWidth = 0; //Definindo que essa tabela não vai ter borda
             tabela.WidthPercentage = 100; //Essa tabela vai ocupar 100% da largura disponivel da pagina, respeitando as margens direita e equerda
 
             //Adicionando celulas de titulos das colunas
             CriarCelulaTexto(tabela, "Código", PdfPCell.ALIGN_CENTER, true);
-            CriarCelulaTexto(tabela, "Nome", PdfPCell.ALIGN_CENTER, true);
+            CriarCelulaTexto(tabela, "Nome", PdfPCell.ALIGN_LEFT, true);
             CriarCelulaTexto(tabela, "Profissão", PdfPCell.ALIGN_CENTER, true);
             CriarCelulaTexto(tabela, "Salário", PdfPCell.ALIGN_CENTER, true);
             CriarCelulaTexto(tabela, "Empregado", PdfPCell.ALIGN_CENTER, true);
+
+            foreach (var pessoa in pessoasSelecionadas)
+            {
+                //Ajustando o tamanho dos campos, o tipo de dados, e o alinhamento desses dados em cada coluna
+                CriarCelulaTexto(tabela, pessoa.IdPessoa.ToString("D6"), PdfPCell.ALIGN_CENTER);
+                CriarCelulaTexto(tabela, pessoa.Nome + " " + pessoa.Sobrenome);
+                CriarCelulaTexto(tabela, pessoa.Profissao.Nome, PdfPCell.ALIGN_CENTER);
+                CriarCelulaTexto(tabela, pessoa.Salario.ToString("C2"), PdfPCell.ALIGN_CENTER);
+                //CriarCelulaTexto(tabela, pessoa.Empregado ? "Sim" : "Não", PdfPCell.ALIGN_CENTER);
+                var caminhoImagemCelula = pessoa.Empregado ? "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_feliz.png" : "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_triste.png";
+                caminhoImagemCelula = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, caminhoImagemCelula);
+                CriarCelulaImagem(tabela, caminhoImagemCelula, 20, 20);
+            }
 
             pdf.Add(tabela);
 
@@ -115,7 +131,7 @@ class Program
                                  int alturaCelula = 25)
     {
         int estilo = iTextSharp.text.Font.NORMAL;
-        if(negrito && italico)
+        if (negrito && italico)
         {
             estilo = iTextSharp.text.Font.BOLDITALIC;
         }
@@ -130,12 +146,42 @@ class Program
 
         var fonteCelula = new iTextSharp.text.Font(fonteBaseTextosRelatorio, tamanhoFonte, estilo, BaseColor.Black);
 
+        var corLinha = iTextSharp.text.BaseColor.White; //definindo cor da linha/celula
+
+        if (tabela.Rows.Count % 2 == 1) corLinha = BaseColor.LightGray; //A troca de cor das linhas vai ser feita em somente linhas pares
+
         var celula = new PdfPCell(new Phrase(texto, fonteCelula));
         celula.HorizontalAlignment = alinhamentoHoriz;
         celula.VerticalAlignment = PdfPCell.ALIGN_MIDDLE;
         celula.Border = 0;
         celula.BorderWidthBottom = 1;
         celula.FixedHeight = alturaCelula;
+        celula.PaddingBottom = 5;
+        celula.BackgroundColor = corLinha;
         tabela.AddCell(celula);
+    }
+
+    static void CriarCelulaImagem(PdfPTable tabela, string caminhoImagem, int larguraImagem, int alturaImagem, int alturaCelula = 25)
+    {
+        var corLinha = iTextSharp.text.BaseColor.White; //definindo cor da linha/celula
+
+        if (tabela.Rows.Count % 2 == 1) corLinha = BaseColor.LightGray; //A troca de cor das linhas vai ser feita em somente linhas pares
+
+        if (File.Exists(caminhoImagem))
+        {
+            iTextSharp.text.Image imagem = iTextSharp.text.Image.GetInstance(caminhoImagem);
+            imagem.ScaleToFit(larguraImagem, alturaImagem);
+
+            var celula = new PdfPCell(imagem);
+            celula.HorizontalAlignment = PdfCell.ALIGN_CENTER;
+            celula.VerticalAlignment = PdfPCell.ALIGN_MIDDLE;
+            celula.Border = 0;
+            celula.BorderWidthBottom = 1;
+            celula.FixedHeight = alturaCelula;
+            celula.PaddingBottom = 5;
+            celula.BackgroundColor = corLinha;
+            tabela.AddCell(celula);
+
+        }
     }
 }
