@@ -17,12 +17,6 @@ class Program
     {
         if (File.Exists("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json"))
         {
-            //using (var sr = new StreamReader("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json"))
-            //{
-            //    var dados = sr.ReadToEnd();
-            //    pessoas = JsonSerializer.Deserialize(dados, typeof(List<Pessoa>)) as List<Pessoa>;
-            //}
-
             using var sr = new StreamReader("C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\pessoas.json");
             var dados = sr.ReadToEnd();
             pessoas = JsonSerializer.Deserialize(dados, typeof(List<Pessoa>)) as List<Pessoa>;
@@ -36,12 +30,7 @@ class Program
         if (pessoasSelecionadas.Any())
         {
             //Calculo da quantidade total de paginas
-            int totalPaginas = 1;
-            int totalLinhas = pessoasSelecionadas.Count;
-            if(totalLinhas > 24)
-            {
-                totalPaginas += (int)Math.Ceiling((totalLinhas - 24) / 29F);
-            }
+            int totalPaginas = CalcularTotalDePaginas(pessoasSelecionadas);
 
             //Configurando o documento PDF
             #region Dimensões do documento PDF
@@ -50,7 +39,7 @@ class Program
             var margemEsquerda = 15 * pixelsPorMilimetro;
             var margemDireita = 15 * pixelsPorMilimetro;
             var margemSuperior = 15 * pixelsPorMilimetro;
-            var margemInferior = 20 * pixelsPorMilimetro; 
+            var margemInferior = 20 * pixelsPorMilimetro;
             #endregion
             var pdf = new Document(tamanhoPagina, margemEsquerda, margemDireita, margemSuperior, margemInferior);
 
@@ -63,78 +52,109 @@ class Program
 
 
             //Adicionando o titulo
-            var fonteParagrafo = new iTextSharp.text.Font(fonteBaseTextosRelatorio, 32, iTextSharp.text.Font.NORMAL, BaseColor.Black);
-            var titulo = new Paragraph("Relatório de Pessoas\n\n", fonteParagrafo);
-            titulo.Alignment = Element.ALIGN_LEFT; //Ajustando o titulo à esquerda do docimento
-            titulo.SpacingAfter = 4;
-            pdf.Add(titulo);
+            ConfigurarTituloPDF(pdf);
 
             //Adicionando imagem
-            var caminhoImagem = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\youtube.png");
-
-            if (File.Exists(caminhoImagem))
-            {
-                iTextSharp.text.Image logo = iTextSharp.text.Image.GetInstance(caminhoImagem);
-
-                //Redimensionando a imagem mantendo as proporções
-                float razaoAlturaLargura = logo.Width / logo.Height;
-                float alturaLogo = 32;
-                float larguraLogo = alturaLogo * razaoAlturaLargura;
-                logo.ScaleToFit(larguraLogo, alturaLogo);
-
-                var margemEsquerdaLogo = pdf.PageSize.Width - pdf.RightMargin - larguraLogo; ;//Alinhando a margem esquerda da imagem alinhado com a margem direita do documento
-                var margemTopoLogo = pdf.PageSize.Height - pdf.TopMargin - 54;
-                logo.SetAbsolutePosition(margemEsquerdaLogo, margemTopoLogo);
-                writer.DirectContent.AddImage(logo, false);
-            }
+            AdicionarImagensNoPDF(pdf, writer);
 
             //Adicionando a tabela de dados
-            var tabela = new PdfPTable(5); //Gerando uma tabela com 5 colunas
-            float[] larguraColunas = { 0.6f, 2f, 1.5f, 1f, 1f };
-            tabela.SetWidths(larguraColunas); //Ajustando as proporções das colunas da planilha
-            tabela.DefaultCell.BorderWidth = 0; //Definindo que essa tabela não vai ter borda
-            tabela.WidthPercentage = 100; //Essa tabela vai ocupar 100% da largura disponivel da pagina, respeitando as margens direita e equerda
+            AdicionarCelulaPDF(pessoasSelecionadas, pdf);
 
-            //Adicionando celulas de titulos das colunas
-            CriarCelulaTexto(tabela, "Código", PdfPCell.ALIGN_CENTER, true);
-            CriarCelulaTexto(tabela, "Nome", PdfPCell.ALIGN_LEFT, true);
-            CriarCelulaTexto(tabela, "Profissão", PdfPCell.ALIGN_CENTER, true);
-            CriarCelulaTexto(tabela, "Salário", PdfPCell.ALIGN_CENTER, true);
-            CriarCelulaTexto(tabela, "Empregado", PdfPCell.ALIGN_CENTER, true);
-
-            foreach (var pessoa in pessoasSelecionadas)
-            {
-                //Ajustando o tamanho dos campos, o tipo de dados, e o alinhamento desses dados em cada coluna
-                CriarCelulaTexto(tabela, pessoa.IdPessoa.ToString("D6"), PdfPCell.ALIGN_CENTER);
-                CriarCelulaTexto(tabela, pessoa.Nome + " " + pessoa.Sobrenome);
-                CriarCelulaTexto(tabela, pessoa.Profissao.Nome, PdfPCell.ALIGN_CENTER);
-                CriarCelulaTexto(tabela, pessoa.Salario.ToString("C2"), PdfPCell.ALIGN_CENTER);
-                //CriarCelulaTexto(tabela, pessoa.Empregado ? "Sim" : "Não", PdfPCell.ALIGN_CENTER);
-                var caminhoImagemCelula = pessoa.Empregado ? "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_feliz.png" : "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_triste.png";
-                caminhoImagemCelula = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, caminhoImagemCelula);
-                CriarCelulaImagem(tabela, caminhoImagemCelula, 20, 20);
-            }
-
-            pdf.Add(tabela);
-
-            pdf.Close();
+            //Fechando arquivo para ser inicializado no CMD/Navegador
             arquivo.Close();
 
             //Abrindo o PDF no visualizador padrão do Sistema operacional
-            var caminhoPDF = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, nomeArquivo); //Criando o caminho completo do docmento
-            if (File.Exists(caminhoPDF))
-            {
-                //Esse comando em linha de comando vai fazer o PDF abrir automaticamente no nosso sistema operacional, e sem mostrar a janela de command
-                Process.Start(new ProcessStartInfo()
-                {
-                    Arguments = $"/c start {caminhoPDF}",
-                    FileName = "cmd.exe",
-                    CreateNoWindow = true,
-                });
-            }
-
-
+            AbrirRelatorio(nomeArquivo);
         }
+    }
+
+    private static void AbrirRelatorio(string nomeArquivo)
+    {
+        var caminhoPDF = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, nomeArquivo); //Criando o caminho completo do docmento
+        if (File.Exists(caminhoPDF))
+        {
+            //Esse comando em linha de comando vai fazer o PDF abrir automaticamente no nosso sistema operacional, e sem mostrar a janela de command
+            Process.Start(new ProcessStartInfo()
+            {
+                Arguments = $"/c start {caminhoPDF}",
+                FileName = "cmd.exe",
+                CreateNoWindow = true,
+            });
+        }
+    }
+
+    private static void AdicionarCelulaPDF(List<Pessoa> pessoasSelecionadas, Document pdf)
+    {
+        var tabela = new PdfPTable(5); //Gerando uma tabela com 5 colunas
+        float[] larguraColunas = { 0.6f, 2f, 1.5f, 1f, 1f };
+        tabela.SetWidths(larguraColunas); //Ajustando as proporções das colunas da planilha
+        tabela.DefaultCell.BorderWidth = 0; //Definindo que essa tabela não vai ter borda
+        tabela.WidthPercentage = 100; //Essa tabela vai ocupar 100% da largura disponivel da pagina, respeitando as margens direita e equerda
+
+        //Adicionando celulas de titulos das colunas
+        CriarCelulaTexto(tabela, "Código", PdfPCell.ALIGN_CENTER, true);
+        CriarCelulaTexto(tabela, "Nome", PdfPCell.ALIGN_LEFT, true);
+        CriarCelulaTexto(tabela, "Profissão", PdfPCell.ALIGN_CENTER, true);
+        CriarCelulaTexto(tabela, "Salário", PdfPCell.ALIGN_CENTER, true);
+        CriarCelulaTexto(tabela, "Empregado", PdfPCell.ALIGN_CENTER, true);
+
+        foreach (var pessoa in pessoasSelecionadas)
+        {
+            //Ajustando o tamanho dos campos, o tipo de dados, e o alinhamento desses dados em cada coluna
+            CriarCelulaTexto(tabela, pessoa.IdPessoa.ToString("D6"), PdfPCell.ALIGN_CENTER);
+            CriarCelulaTexto(tabela, pessoa.Nome + " " + pessoa.Sobrenome);
+            CriarCelulaTexto(tabela, pessoa.Profissao.Nome, PdfPCell.ALIGN_CENTER);
+            CriarCelulaTexto(tabela, pessoa.Salario.ToString("C2"), PdfPCell.ALIGN_CENTER);
+            //CriarCelulaTexto(tabela, pessoa.Empregado ? "Sim" : "Não", PdfPCell.ALIGN_CENTER);
+            var caminhoImagemCelula = pessoa.Empregado ? "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_feliz.png" : "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\emoji_triste.png";
+            caminhoImagemCelula = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, caminhoImagemCelula);
+            CriarCelulaImagem(tabela, caminhoImagemCelula, 20, 20);
+        }
+
+        pdf.Add(tabela); //Adicionar tabela e celulas no PDF
+        pdf.Close(); //Fechando o PDF para alterações
+    }
+
+    private static void AdicionarImagensNoPDF(Document pdf, PdfWriter writer)
+    {
+        var caminhoImagem = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "C:\\Users\\victor.marri\\source\\repos\\ProjetosPessoais\\GeradorDeRelatoriosEmPDF\\img\\youtube.png");
+
+        if (File.Exists(caminhoImagem))
+        {
+            Image logo = iTextSharp.text.Image.GetInstance(caminhoImagem);
+
+            //Redimensionando a imagem mantendo as proporções
+            float razaoAlturaLargura = logo.Width / logo.Height;
+            float alturaLogo = 32;
+            float larguraLogo = alturaLogo * razaoAlturaLargura;
+            logo.ScaleToFit(larguraLogo, alturaLogo);
+
+            var margemEsquerdaLogo = pdf.PageSize.Width - pdf.RightMargin - larguraLogo; ;//Alinhando a margem esquerda da imagem alinhado com a margem direita do documento
+            var margemTopoLogo = pdf.PageSize.Height - pdf.TopMargin - 54;
+            logo.SetAbsolutePosition(margemEsquerdaLogo, margemTopoLogo);
+            writer.DirectContent.AddImage(logo, false);
+        }
+    }
+
+    private static void ConfigurarTituloPDF(Document pdf)
+    {
+        var fonteParagrafo = new Font(fonteBaseTextosRelatorio, 32, iTextSharp.text.Font.NORMAL, BaseColor.Black);
+        var titulo = new Paragraph("Relatório de Pessoas\n\n", fonteParagrafo);
+        titulo.Alignment = Element.ALIGN_LEFT; //Ajustando o titulo à esquerda do docimento
+        titulo.SpacingAfter = 4;
+        pdf.Add(titulo);
+    }
+
+    private static int CalcularTotalDePaginas(List<Pessoa> pessoasSelecionadas)
+    {
+        int totalPaginas = 1;
+        int totalLinhas = pessoasSelecionadas.Count;
+        if (totalLinhas > 24)
+        {
+            totalPaginas += (int)Math.Ceiling((totalLinhas - 24) / 29F);
+        }
+
+        return totalPaginas;
     }
 
     static void CriarCelulaTexto(PdfPTable tabela,
@@ -145,23 +165,23 @@ class Program
                                  int tamanhoFonte = 12,
                                  int alturaCelula = 25)
     {
-        int estilo = iTextSharp.text.Font.NORMAL;
+        int estilo = Font.NORMAL;
         if (negrito && italico)
         {
-            estilo = iTextSharp.text.Font.BOLDITALIC;
+            estilo = Font.BOLDITALIC;
         }
         else if (negrito)
         {
-            estilo = iTextSharp.text.Font.BOLD;
+            estilo = Font.BOLD;
         }
         else if (italico)
         {
-            estilo = iTextSharp.text.Font.ITALIC;
+            estilo = Font.ITALIC;
         }
 
-        var fonteCelula = new iTextSharp.text.Font(fonteBaseTextosRelatorio, tamanhoFonte, estilo, BaseColor.Black);
+        var fonteCelula = new Font(fonteBaseTextosRelatorio, tamanhoFonte, estilo, BaseColor.Black);
 
-        var corLinha = iTextSharp.text.BaseColor.White; //definindo cor da linha/celula
+        var corLinha = BaseColor.White; //definindo cor da linha/celula
 
         if (tabela.Rows.Count % 2 == 1) corLinha = BaseColor.LightGray; //A troca de cor das linhas vai ser feita em somente linhas pares
 
@@ -178,13 +198,13 @@ class Program
 
     static void CriarCelulaImagem(PdfPTable tabela, string caminhoImagem, int larguraImagem, int alturaImagem, int alturaCelula = 25)
     {
-        var corLinha = iTextSharp.text.BaseColor.White; //definindo cor da linha/celula
+        var corLinha = BaseColor.White; //definindo cor da linha/celula
 
         if (tabela.Rows.Count % 2 == 1) corLinha = BaseColor.LightGray; //A troca de cor das linhas vai ser feita em somente linhas pares
 
         if (File.Exists(caminhoImagem))
         {
-            iTextSharp.text.Image imagem = iTextSharp.text.Image.GetInstance(caminhoImagem);
+            Image imagem = Image.GetInstance(caminhoImagem);
             imagem.ScaleToFit(larguraImagem, alturaImagem);
 
             var celula = new PdfPCell(imagem);
