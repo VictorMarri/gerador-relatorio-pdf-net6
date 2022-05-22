@@ -1,10 +1,5 @@
 ﻿using iTextSharp.text;
 using iTextSharp.text.pdf;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace GeradorDeRelatoriosEmPDF
 {
@@ -34,7 +29,7 @@ namespace GeradorDeRelatoriosEmPDF
         {
             base.OnEndPage(writer, document);
             AdicionarMomentoGeracaoDeRelatorio(writer, document);
-            AdicionarNumeroDePaginas(writer, document); 
+            AdicionarNumeroDePaginas(writer, document);
         }
 
         private void AdicionarMomentoGeracaoDeRelatorio(PdfWriter writer, Document document)
@@ -45,7 +40,7 @@ namespace GeradorDeRelatoriosEmPDF
             wdc.SetFontAndSize(fonteRodape.BaseFont, fonteRodape.Size);
             wdc.SetTextMatrix(document.LeftMargin, document.BottomMargin * 0.75f);
             wdc.ShowText(textoMomentoGeracao);
-            wdc.EndText(); 
+            wdc.EndText();
         }
 
         private void AdicionarNumeroDePaginas(PdfWriter writer, Document document)
