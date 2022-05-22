@@ -35,6 +35,14 @@ class Program
 
         if (pessoasSelecionadas.Any())
         {
+            //Calculo da quantidade total de paginas
+            int totalPaginas = 1;
+            int totalLinhas = pessoasSelecionadas.Count;
+            if(totalLinhas > 24)
+            {
+                totalPaginas += (int)Math.Ceiling((totalLinhas - 24) / 29F);
+            }
+
             //Configurando o documento PDF
             #region Dimensões do documento PDF
             var pixelsPorMilimetro = 72 / 25.2F; //Ajustando a resolução do PDF. Sabemos que é 72dpi por padrão 
@@ -50,7 +58,7 @@ class Program
 
             var arquivo = new FileStream(nomeArquivo, FileMode.Create); //Criando um novo arquivo
             var writer = PdfWriter.GetInstance(pdf, arquivo); //Associamos o documento pdf que estamos criando, ao arquivo que criamos. Portantom tudo que fizemos no documento PDF será salvo nesse arquivo
-            writer.PageEvent = new EventosDePagina();
+            writer.PageEvent = new EventosDePagina(totalPaginas);
             pdf.Open(); //Inicializa o objeto pra ele começar a receber conteudo no PDF
 
 

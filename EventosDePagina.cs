@@ -14,11 +14,14 @@ namespace GeradorDeRelatoriosEmPDF
         private BaseFont fonteBaseRodape { get; set; }
         private Font fonteRodape { get; set; }
 
-        public EventosDePagina()
+        public int totalPaginas { get; set; }
+
+        public EventosDePagina(int totalPaginas)
         {
             //Inicializando as fontes do Rodapé da pagina
             fonteBaseRodape = BaseFont.CreateFont(BaseFont.HELVETICA, BaseFont.CP1252, false);
             fonteRodape = new Font(fonteBaseRodape, 8f, Font.NORMAL, BaseColor.Black);
+            this.totalPaginas = totalPaginas;
         }
 
         public override void OnOpenDocument(PdfWriter writer, Document document)
@@ -31,7 +34,7 @@ namespace GeradorDeRelatoriosEmPDF
         {
             base.OnEndPage(writer, document);
             AdicionarMomentoGeracaoDeRelatorio(writer, document);
-
+            AdicionarNumeroDePaginas(writer, document); 
         }
 
         private void AdicionarMomentoGeracaoDeRelatorio(PdfWriter writer, Document document)
@@ -48,9 +51,17 @@ namespace GeradorDeRelatoriosEmPDF
         private void AdicionarNumeroDePaginas(PdfWriter writer, Document document)
         {
             int paginaAtual = writer.PageNumber;
-            var textoPaginacao = $"Página {paginaAtual} de ?";
+            var textoPaginacao = $"Página {paginaAtual} de {totalPaginas}";
 
             float larguraTextoPaginacao = fonteBaseRodape.GetWidthPoint(textoPaginacao, fonteRodape.Size);
+            var tamanhoPagina = document.PageSize;
+
+            wdc.BeginText();
+            wdc.SetFontAndSize(fonteRodape.BaseFont, fonteRodape.Size);
+            wdc.SetTextMatrix(tamanhoPagina.Width - document.RightMargin - larguraTextoPaginacao, document.BottomMargin * 0.75f);
+            wdc.ShowText(textoPaginacao);
+            wdc.EndText();
+
         }
 
     }
